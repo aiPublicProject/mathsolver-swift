@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 /// BYOK AI math solver with independent verification.
 /// An answer is only `verified: true` when the model's verification

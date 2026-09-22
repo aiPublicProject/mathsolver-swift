@@ -3,7 +3,30 @@ import Foundation
 /// BYOK AI math solver with independent verification.
 /// An answer is only `verified: true` when the model's verification
 /// expression (pure arithmetic) is evaluated locally and matches.
-public enum MathSolver {
+public final class MathSolver {
+    private let apiKey: String
+    private let baseUrl: String
+    private let model: String
+    private let transport: Transport
+
+    /// BYOK client for an OpenAI-compatible endpoint. Instantiate once, solve many.
+    /// - Parameters:
+    ///   - apiKey: user's own key (BYOK)
+    ///   - baseUrl: any OpenAI-compatible endpoint, e.g. https://api.deepseek.com/v1
+    ///   - model: model id; nil = gpt-4o-mini
+    ///   - transport: test injection; nil = built-in HTTP
+    public init(apiKey: String, baseUrl: String = "https://api.openai.com/v1",
+                model: String? = nil, transport: Transport? = nil) throws {
+        if apiKey.isEmpty { throw SolverError("NO_API_KEY", "apiKey is required (BYOK)") }
+        let base = baseUrl.replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
+        if !(base.hasPrefix("http://") || base.hasPrefix("https://")) {
+            throw SolverError("BAD_BASE_URL", "baseUrl must be an http(s) URL, e.g. https://api.deepseek.com/v1")
+        }
+        self.apiKey = apiKey
+        self.baseUrl = base
+        self.model = model ?? "gpt-4o-mini"
+        self.transport = transport ?? MathSolver.defaultTransport
+    }
 
     public struct SolverError: Error, CustomStringConvertible {
         public let code: String
@@ -225,24 +248,19 @@ public enum MathSolver {
 
     // MARK: - solve
 
-    public static func solve(_ problem: String,
-                             apiKey: String,
-                             baseUrl: String = "https://api.openai.com/v1",
-                             model: String = "gpt-4o-mini",
-                             transport: Transport? = nil) throws -> SolveResult {
-        if apiKey.isEmpty { throw SolverError("NO_API_KEY", "apiKey is required (BYOK)") }
+    public func solve(_ problem: String) throws -> SolveResult {
         if problem.trimmingCharacters(in: .whitespaces).isEmpty {
             throw SolverError("NO_PROBLEM", "problem must be non-empty")
         }
-        let tr = transport ?? defaultTransport
-        let url = baseUrl.replacingOccurrences(of: "/+$", with: "", options: .regularExpression) + "/chat/completions"
+        let tr = transport
+        let url = baseUrl + "/chat/completions"
         var messages: [[String: String]] = [
             ["role": "system", "content": systemPrompt],
             ["role": "user", "content": problem]
         ]
         func call() throws -> String {
-            let body = try! JSONSerialization.data(withJSONObject: ["model": model, "messages": messages, "temperature": 0])
-            return try tr(url, String(data: body, encoding: .utf8)!, apiKey)
+            let body = try! JSONSerialization.data(withJSONObject: ["model": self.model, "messages": messages, "temperature": 0])
+            return try tr(url, String(data: body, encoding: .utf8)!, self.apiKey)
         }
 
         var parsed: Parsed

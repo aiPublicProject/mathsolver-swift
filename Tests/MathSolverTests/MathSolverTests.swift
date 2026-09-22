@@ -26,6 +26,15 @@ final class MathSolverTests: XCTestCase {
         }
     }
 
+    func testInitValidatesCredentials() throws {
+        XCTAssertThrowsError(try MathSolver(apiKey: "")) { e in
+            XCTAssertEqual((e as? MathSolver.SolverError)?.code, "NO_API_KEY")
+        }
+        XCTAssertThrowsError(try MathSolver(apiKey: "sk", baseUrl: "not-a-url")) { e in
+            XCTAssertEqual((e as? MathSolver.SolverError)?.code, "BAD_BASE_URL")
+        }
+    }
+
     func testSolveVerifiedFirstTry() throws {
         var calls = 0
         var seenURL: String?, seenKey: String?
@@ -33,12 +42,13 @@ final class MathSolverTests: XCTestCase {
             calls += 1; seenURL = url; seenKey = key
             return self.good
         }
-        let r = try MathSolver.solve("2x + 3 = 11, solve for x", apiKey: "sk-test", transport: tr)
+        let solver = try MathSolver(apiKey: "sk-test", baseUrl: "https://api.deepseek.com/v1", model: "deepseek-chat", transport: tr)
+        let r = try solver.solve("2x + 3 = 11, solve for x")
         XCTAssertTrue(r.verified)
         XCTAssertEqual(r.retries, 0)
         XCTAssertEqual(r.evaluated, 4)
         XCTAssertEqual(calls, 1)
-        XCTAssertTrue(seenURL!.hasSuffix("/chat/completions"))
+        XCTAssertEqual(seenURL, "https://api.deepseek.com/v1/chat/completions")
         XCTAssertEqual(seenKey, "sk-test")
     }
 
@@ -48,7 +58,7 @@ final class MathSolverTests: XCTestCase {
             n += 1
             return n == 1 ? self.wrong : self.good
         }
-        let r = try MathSolver.solve("2x+3=11", apiKey: "sk", transport: tr)
+        let r = try MathSolver(apiKey: "sk", transport: tr).solve("2x+3=11")
         XCTAssertTrue(r.verified)
         XCTAssertEqual(r.retries, 1)
     }
@@ -59,20 +69,18 @@ final class MathSolverTests: XCTestCase {
             n += 1
             return n == 1 ? "no json" : self.good
         }
-        let r = try MathSolver.solve("1+1", apiKey: "sk", transport: tr)
+        let r = try MathSolver(apiKey: "sk", transport: tr).solve("1+1")
         XCTAssertTrue(r.verified)
     }
 
     func testInvalidTwiceRaises() {
-        XCTAssertThrowsError(try MathSolver.solve("1+1", apiKey: "sk", transport: { _, _, _ in "nothing" })) { error in
+        XCTAssertThrowsError(try MathSolver(apiKey: "sk", transport: { _, _, _ in "nothing" }).solve("1+1")) { error in
             XCTAssertEqual((error as? MathSolver.SolverError)?.code, "INVALID_JSON")
         }
     }
 
-    func testNoAPIKey() {
-        XCTAssertThrowsError(try MathSolver.solve("1+1", apiKey: "")) { error in
-            XCTAssertEqual((error as? MathSolver.SolverError)?.code, "NO_API_KEY")
-        }
+    func testNoAPIKeyCoveredAtInit() {
+        XCTAssertTrue(true) // covered in testInitValidatesCredentials
     }
 
     func testHTTPErrorNoRetry() {
@@ -81,7 +89,7 @@ final class MathSolverTests: XCTestCase {
             calls += 1
             throw MathSolver.SolverError("HTTP_ERROR", "401")
         }
-        XCTAssertThrowsError(try MathSolver.solve("1+1", apiKey: "sk", transport: tr)) { error in
+        XCTAssertThrowsError(try MathSolver(apiKey: "sk", transport: tr).solve("1+1")) { error in
             XCTAssertEqual((error as? MathSolver.SolverError)?.code, "HTTP_ERROR")
         }
         XCTAssertEqual(calls, 1)
@@ -89,7 +97,7 @@ final class MathSolverTests: XCTestCase {
 
     func testStillWrongUnverified() throws {
         let tr: MathSolver.Transport = { _, _, _ in self.wrong }
-        let r = try MathSolver.solve("2x+3=11", apiKey: "sk", transport: tr)
+        let r = try MathSolver(apiKey: "sk", transport: tr).solve("2x+3=11")
         XCTAssertFalse(r.verified)
         XCTAssertEqual(r.retries, 1)
     }

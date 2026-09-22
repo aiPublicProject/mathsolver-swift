@@ -268,16 +268,16 @@ public final class MathSolver {
 
         var parsed: Parsed
         do {
-            parsed = try parseModelReply(try call())
+            parsed = try MathSolver.parseModelReply(try call())
         } catch let e as SolverError where e.code == "INVALID_JSON" {
             messages.append(["role": "assistant", "content": "invalid JSON"])
             messages.append(["role": "user", "content": "Your reply was not valid JSON. Reply again with the exact strict JSON shape."])
-            parsed = try parseModelReply(try call())
+            parsed = try MathSolver.parseModelReply(try call())
         }
 
         func evaluate(_ p: Parsed) -> (Double?, Bool) {
-            guard let ev = try? evalExpression(p.expression) else { return (nil, false) }
-            return (ev, numericallyEqual(ev, p.answer))
+            guard let ev = try? MathSolver.evalExpression(p.expression) else { return (nil, false) }
+            return (ev, MathSolver.numericallyEqual(ev, p.answer))
         }
 
         var (evaluated, verified) = evaluate(parsed)
@@ -288,7 +288,7 @@ public final class MathSolver {
                 "Your verification expression evaluated to \(evaluated.map(String.init) ?? "an error"), " +
                 "which does not match your answer \(parsed.answer). " +
                 "Re-derive carefully and reply again with the same strict JSON shape."])
-            if let second = try? parseModelReply(try call()) {
+            if let second = try? MathSolver.parseModelReply(try call()) {
                 let (ev2, ok2) = evaluate(second)
                 if let ev2 = ev2 { evaluated = ev2 }
                 if ok2 { parsed = second; verified = true }

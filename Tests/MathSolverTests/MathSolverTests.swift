@@ -100,5 +100,16 @@ final class MathSolverTests: XCTestCase {
         let r = try MathSolver(apiKey: "sk", transport: tr).solve("2x+3=11")
         XCTAssertFalse(r.verified)
         XCTAssertEqual(r.retries, 1)
+    }}
+
+    func testSmokeRealAPI() throws {
+        let env = ProcessInfo.processInfo.environment
+        try XCTSkipIf(env["SMOKE_API_KEY"] == nil, "smoke: set SMOKE_API_KEY to run")
+        let base = env["SMOKE_BASE_URL"] ?? "https://api.openai.com/v1"
+        let solver = try MathSolver(apiKey: env["SMOKE_API_KEY"]!, baseUrl: base)
+        let r = try solver.solve("2x + 3 = 11, solve for x")
+        print("smoke: answer=\(r.answer) verified=\(r.verified) retries=\(r.retries)")
+        XCTAssertTrue(r.verified)
+        XCTAssertEqual(r.answer, 4, accuracy: 1e-9)
     }
 }

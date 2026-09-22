@@ -258,7 +258,7 @@ public final class MathSolver {
         let tr = transport
         let url = baseUrl + "/chat/completions"
         var messages: [[String: String]] = [
-            ["role": "system", "content": systemPrompt],
+            ["role": "system", "content": MathSolver.systemPrompt],
             ["role": "user", "content": problem]
         ]
         func call() throws -> String {
@@ -285,7 +285,7 @@ public final class MathSolver {
         if !verified {
             retries = 1
             messages.append(["role": "user", "content":
-                "Your verification expression evaluated to \(evaluated.map(String.init) ?? "an error"), " +
+                "Your verification expression evaluated to \(evaluated.map { String($0) } ?? "an error"), " +
                 "which does not match your answer \(parsed.answer). " +
                 "Re-derive carefully and reply again with the same strict JSON shape."])
             if let second = try? MathSolver.parseModelReply(try call()) {

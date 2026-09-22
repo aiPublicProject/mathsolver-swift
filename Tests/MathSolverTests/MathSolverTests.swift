@@ -100,7 +100,7 @@ final class MathSolverTests: XCTestCase {
         let r = try MathSolver(apiKey: "sk", transport: tr).solve("2x+3=11")
         XCTAssertFalse(r.verified)
         XCTAssertEqual(r.retries, 1)
-    }}
+    }
 
     func testSmokeRealAPI() throws {
         let env = ProcessInfo.processInfo.environment

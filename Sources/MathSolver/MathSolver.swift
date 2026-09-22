@@ -299,8 +299,7 @@ public final class MathSolver {
     }
 
     public static let defaultTransport: Transport = { url, body, apiKey in
-        guard let req = URLRequest(url: URL(string: url)!) else { throw SolverError("HTTP_ERROR", "bad url") }
-        var request = req
+        var request = URLRequest(url: URL(string: url)!)
         request.httpMethod = "POST"
         request.httpBody = body.data(using: .utf8)
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")

@@ -260,8 +260,11 @@ final class MathSolverTests: XCTestCase {
     func testSmokeRealAPI() throws {
         let env = ProcessInfo.processInfo.environment
         try XCTSkipIf(env["SMOKE_API_KEY"] == nil, "smoke: set SMOKE_API_KEY to run")
-        let base = env["SMOKE_BASE_URL"] ?? "https://api.openai.com/v1"
-        let solver = try MathSolver(apiKey: env["SMOKE_API_KEY"]!, baseUrl: base)
+        var base = env["SMOKE_BASE_URL"] ?? ""
+        if base.isEmpty { base = "https://api.openai.com/v1" }
+        var model = env["SMOKE_MODEL"]
+        if model?.isEmpty ?? true { model = nil } // empty/unset -> gpt-4o-mini default
+        let solver = try MathSolver(apiKey: env["SMOKE_API_KEY"]!, baseUrl: base, model: model)
         let r = try solver.solve("2x + 3 = 11, solve for x")
         print("smoke: answer=\(r.answer) verified=\(r.verified) retries=\(r.retries)")
         XCTAssertTrue(r.verified)

@@ -2,7 +2,7 @@ name: test
 on: [push, pull_request]
 jobs:
   test:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04  # direct swift.org 6.1.2 tarball needs glibc 2.38 (noble)
     steps:
       - uses: actions/checkout@v4
       - name: Install Swift 6.1.2 (direct from swift.org)
